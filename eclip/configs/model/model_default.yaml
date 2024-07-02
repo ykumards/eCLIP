@@ -1,0 +1,22 @@
+pretrained: True
+checkpoint_path: "./default_path/to/checkpoint"
+proj_dim: 512
+proj_type: "simple" # "simple", "convirt"
+clip_model_type: "clip"
+# mixup related
+mixup_alpha: 0.2
+mixup_type: "linear" # choose between ['identity', 'random', 'linear', 'dacl', 'fixed', 'geodesic']
+text:
+  model_name: "emilyalsentzer/Bio_ClinicalBERT" # Note: other than for debug purposes, this model will be fixed
+  embed_method: "cls" # cls or mean (mean of last hidden state)
+  num_proj_layers: 1
+  proj_bias: False
+  proj_norm: True
+  freeze_enc: False
+image:
+  model_name: "swin"
+  num_proj_layers: 1
+  proj_bias: False
+  proj_norm: True
+  pretrained: True
+  freeze_enc: False

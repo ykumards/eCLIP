@@ -1,0 +1,14 @@
+# data_path: "/l/Work/aalto/eCLIP/datafiles/openi_h5"
+data_path: ""
+expert_data_path: ""
+eval:
+  rsna_path: ""
+  chexpert_path: ""
+  cxr14_path: ""
+caption_key: "findings"
+img_size: 224
+mean: 0.58
+std: 0.26
+resize_ratio: 0.75
+train_data_size: 1000
+val_data_size: 200
