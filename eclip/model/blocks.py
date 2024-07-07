@@ -1,16 +1,8 @@
 from dataclasses import dataclass
-import os
-import random
-import math
 
-import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import segmentation_models_pytorch as smp
-import torchxrayvision as xrv
-
-from eclip.model.psp_model import PspNet, convert_state_dict
 
 
 @dataclass

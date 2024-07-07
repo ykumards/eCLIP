@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 from pytorch_lightning.plugins.environments import SLURMEnvironment
 
 from eclip.builders import build_logger, build_callbacks, build_datamodule, build_module
-from eclip.eval.eval_classification_pneumonia import eval_rsna
+from eclip.eval.eval_classification_rsna import eval_rsna
 from eclip.eval.eval_classification_chexpert import eval_chexpert
 from eclip.eval.eval_classification_cxr14x100 import eval_cxr14
 
