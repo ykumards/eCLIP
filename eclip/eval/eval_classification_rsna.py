@@ -174,11 +174,11 @@ def eval_rsna(path_to_training_output_folder, rsna_datadir, verbose=False):
 if __name__ == "__main__":
     manual_seed_everything(2024)
 
-    rsna_datadir = Path("/scratch/project_462000314/data_eclip/pneumonia_split")
+    rsna_datadir = Path("")
 
     model_paths = [
-        ("CLIP", "/projappl/project_462000314/final_eccv/eCLIP/saved_models/CLIP-best-2024-02-22"),
-        ("eCLIP", "/projappl/project_462000314/final_eccv/eCLIP/saved_models/eCLIP-best-2024-02-22")
+        ("CLIP", ""),
+        ("eCLIP", "")
 
     ]
 

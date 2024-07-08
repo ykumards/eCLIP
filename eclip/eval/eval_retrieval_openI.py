@@ -173,6 +173,4 @@ if __name__ == "__main__":
     path_to_output_folder = "<path>"
     data_path = "<path>"
 
-    # data_path = "/scratch/project_462000314/data_eclip/open-i-raw"
-    # path_to_output_folder = "/projappl/project_462000314/final_eccv/eCLIP/saved_models/eCLIP-best-2024-02-22"
     retrieve_best_report(path_to_output_folder, openi_path=data_path)

@@ -155,12 +155,12 @@ def eval_chexpert(
 if __name__ == "__main__":
     manual_seed_everything(2024)
 
-    chexpert_datadir = Path("/scratch/project_462000314/data_eclip/chexpert_5x200_official")
-    mimic_datadir = Path("/scratch/project_462000314/data_eclip/mimic_5x200")
+    chexpert_datadir = Path("")
+    mimic_datadir = Path("")
 
     model_paths = [
-        ("CLIP", "/projappl/project_462000314/final_eccv/eCLIP/saved_models/CLIP-best-2024-02-22"),
-        ("eCLIP", "/projappl/project_462000314/final_eccv/eCLIP/saved_models/eCLIP-best-2024-02-22")
+        ("CLIP", ""),
+        ("eCLIP", "")
 
     ]
 

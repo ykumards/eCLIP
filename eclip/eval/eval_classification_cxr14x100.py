@@ -162,11 +162,11 @@ def eval_cxr14(path_to_training_output_folder, cxr14_path, verbose=False):
 if __name__ == "__main__":
     manual_seed_everything(2024)
 
-    cxr14_path = "/scratch/project_462000314/data_eclip/cxr14x100.pkl"
+    cxr14_path = ""
 
     model_paths = [
-        ("CLIP", "/projappl/project_462000314/final_eccv/eCLIP/saved_models/CLIP-best-2024-02-22"),
-        ("eCLIP", "/projappl/project_462000314/final_eccv/eCLIP/saved_models/eCLIP-best-2024-02-22")
+        ("CLIP", ""),
+        ("eCLIP", "")
 
     ]
 

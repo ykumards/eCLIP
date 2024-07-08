@@ -489,7 +489,4 @@ if __name__ == "__main__":
     clip_model_checkpoint_dir = "<path>"
     openi_path = "<path>"
 
-    # clip_model_checkpoint_dir = "/projappl/project_462000314/eCLIP/saved_models/eCLIP-best-2024-02-22"
-    # openi_path = "/scratch/project_462000314/data_eclip/open-i-raw"
-
     main(clip_model_checkpoint_dir, openi_path)
