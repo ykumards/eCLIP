@@ -28,7 +28,7 @@ python eclip/train.py data=data_default hydra=hydra_default \
     val_check_interval=20 \
     limit_val_batches=10 \
     wandb_project_name="eclip-debug" \
-    num_gpus=1
+    num_gpus=8
 ```
 
 ### Evaluation
