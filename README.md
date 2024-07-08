@@ -15,7 +15,7 @@ We use `pytorch-lightning` to train the model and `hydra` to handle the config f
 CLIP/eCLIP training can be done by running by passing the appropriate hydra flags for config. Toggle the `use_expert` flag to switch between eCLIP and CLIP pretraining.
 
 ```
-python eclip/train.py data=data_lumi_cxr hydra=hydra_lumi \
+python eclip/train.py data=data_default hydra=hydra_default \
     use_expert=true \
     model="model_default" \
     batch_size=64 \
