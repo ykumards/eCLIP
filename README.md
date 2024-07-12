@@ -43,9 +43,19 @@ It should print the ZS accuracy and F1 scores for the models
 
 ![image](https://github.com/ykumards/eCLIP/assets/5177126/34071f87-3d70-43c8-8ac3-548e4275ae28)
 
-
 #### Report Generation
 
 We use `Mistral 7B Instruction` for generating radiology reports using the input image. This utilizes Retrieval Augmented Generation (RAG) and uses nearest neighbors to pick some relevant reports and injects them in the LLM prompt.
 
 ![image](https://github.com/ykumards/eCLIP/assets/5177126/60be85ac-dbe4-4321-b7e9-8dcda9231202)
+
+---
+
+### Stack
+
+- Hardware -- AMD MI150X GPUs provided by [LUMI supercomputer](https://lumi-supercomputer.eu/lumi_supercomputer/)
+- Training -- [Pytorch](https://pytorch.org/), [Transformers](https://huggingface.co/docs/transformers/index) and [Lightning](https://lightning.ai/docs/pytorch/stable/)
+- Tracking -- [Weights & Biases](https://wandb.ai/)
+- Config Management -- [Hydra](https://hydra.cc/)
+- Data loading -- [Webdataset](https://github.com/webdataset/webdataset)
+
