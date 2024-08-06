@@ -1,4 +1,9 @@
-# eCLIP
+# eCLIP 
+
+<a href="https://arxiv.org/abs/2403.10153">
+    <img alt="Paper URL" src="https://img.shields.io/badge/arxiv-2403.10153-blue">
+</a>
+
 Code for "Improving Medical Multi-modal Contrastive Learning with Expert Annotations" accepted at ECCV 2024.
 
 ![image](https://github.com/ykumards/eCLIP/assets/5177126/f1ec7a9a-3a5e-47e1-9150-ca2e474fa4f1)
