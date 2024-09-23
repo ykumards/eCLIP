@@ -9,6 +9,8 @@ Code for "Improving Medical Multi-modal Contrastive Learning with Expert Annotat
 ![image](https://github.com/ykumards/eCLIP/assets/5177126/f1ec7a9a-3a5e-47e1-9150-ca2e474fa4f1)
 
 
+Read the full paper here: https://arxiv.org/abs/2403.10153
+
 ### Setup
 
 We use the `eclip` package for training and evaluation. To install it run `pip install -e .` from the root folder and it installs all the dependencies. 
