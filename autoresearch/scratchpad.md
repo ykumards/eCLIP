@@ -1,10 +1,10 @@
 # Autoresearch Scratchpad
 
 ## Current Best
-- **mean_rank: 189.01 ± 0.84** (3-fold CV)
-- Config: LR=1e-4, BS=64, MAX_STEPS=800, WARMUP=80, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=256
-- peak_memory_gb: 14.67
-- Improvement from original baseline (344.68): **-155.67** (~45% reduction)
+- **mean_rank: 183.27 ± 4.87** (3-fold CV)
+- Config: LR=1e-4, BS=64, MAX_STEPS=800, WARMUP=80, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=512
+- peak_memory_gb: 14.86
+- Improvement from original baseline (344.68): **-161.41** (~47% reduction)
 
 ## Key Findings
 
@@ -42,18 +42,23 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 | 16 | Text mean pooling (vs CLS) | 197.93 ± 4.04 | +0.99 | 14.6 | REVERTED |
 | 17 | 2-layer projectors (GELU+LN) | 204.57 ± 6.29 | +7.63 | 14.6 | REVERTED |
 | 18 | PROJ_DIM=256 | 189.01 ± 0.84 | -7.93 | 14.7 | committed |
+| 19 | PROJ_DIM=512 | 183.27 ± 4.87 | -5.74 | 14.9 | committed |
+| 20 | Label smoothing=0.1 | 230.29 ± 2.24 | +47.02 | 14.9 | REVERTED |
+| 21 | Pixel-space heatmap masking | 188.10 ± 3.22 | +4.83 | 18.4 | REVERTED |
+| 22 | WEIGHT_DECAY=1e-3 | 183.95 ± 2.94 | +0.68 | 14.9 | REVERTED |
+| 23 | Separate backbone LR=1e-5 | 289.20 ± 8.23 | +105.93 | 14.9 | REVERTED |
 
 ## Hypotheses
 - ~~2-layer projectors (GELU + LayerNorm) could help~~ — tested, worse (+7.63), extra capacity worsens overfitting
-- PROJ_DIM=256 confirmed helpful (-7.93, extremely low variance 0.84) — more embedding capacity without adding model params
+- PROJ_DIM scaling: 128→256 (-7.93), 256→512 (-5.74) — more embedding capacity in projection keeps helping, diminishing returns starting
 - ~~Mean pooling for text (instead of CLS) often works better for DistilBERT~~ — tested, no improvement (+0.99), CLS is fine here
-- Pixel-space heatmap injection (image * heatmap → backbone) might capture spatial info better than MHA
+- ~~Pixel-space heatmap injection~~ — tested, worse (+4.83) AND doubles expert-path memory. MHA is better than naive masking
 
 ## Next Experiments (Phase 3)
-- PROJ_DIM=512 — push further since 256 helped significantly
-- Heatmap injection: pixel-space masking vs current MHA approach
-- Label smoothing in contrastive loss
+- LR=2e-4 — current 1e-4 might be too conservative now with PROJ_DIM=512
+- AUX_LOSS_WEIGHT=0.2 — slightly stronger expert signal (0.1 current, 0.5 was too much)
 - Gradient accumulation for effective BS=128
+- Dropout in projectors to combat overfitting
 
 ## Failed Patterns
 - LR=1e-3: temperature explodes, total collapse
@@ -63,3 +68,6 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 - EXPERT_PROB=1.0: too much expert, diminishing returns
 - 2-layer projectors: more capacity in projector head worsens overfitting (+7.63)
 - Text mean pooling: no benefit over CLS for DistilBERT in this setup
+- Label smoothing=0.1: catastrophic (+47.02) — prevents model from learning sharp cross-modal distinctions
+- Pixel-space heatmap masking: worse than MHA (+4.83) and uses 18.4 GB (doubles expert path compute)
+- Separate backbone LR=1e-5: catastrophic (+105.93) — backbone can't adapt to art domain in 800 steps with low LR
