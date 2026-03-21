@@ -1,10 +1,10 @@
 # Autoresearch Scratchpad
 
 ## Current Best
-- **mean_rank: 160.93 ± 1.33** (3-fold CV)
-- Config: LR=2e-4, BS=64, MAX_STEPS=800, WARMUP=160, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=512
-- peak_memory_gb: 14.86
-- Improvement from original baseline (344.68): **-183.75** (~53% reduction)
+- **mean_rank: 158.45 ± 0.68** (3-fold CV)
+- Config: LR=2e-4, BS=64, MAX_STEPS=800, WARMUP=160, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=512, WISE_FT_ALPHA=0.2
+- peak_memory_gb: 15.22
+- Improvement from original baseline (344.68): **-186.23** (~54% reduction)
 
 ## Phase 1–4 Summary (32 experiments)
 
@@ -72,17 +72,37 @@ Expert contributes ~6–10 mean_rank points (comparing EXPERT_PROB=0 vs 0.8 acro
 | 31 | MIXUP_ALPHA=0.1 | 162.95 ± 0.86 | +2.02 | 14.9 | REVERTED |
 | 32 | Grad accum (eff. BS=128, 400 steps) | 182.83 ± 4.12 | +21.90 | 8.6 | REVERTED |
 | 33 | SigLIP loss + learnable bias | 190.62 ± 12.01 | +29.69 | 14.9 | REVERTED |
+| 34 | WiSE-FT alpha=0.5 | 206.88 ± 5.10 | +45.95 | 15.2 | REVERTED (alpha too high) |
+| 35 | WiSE-FT alpha=0.2 | 158.45 ± 0.68 | -2.48 | 15.2 | committed |
 
 ## Next Experiments (Phase 5 — "Out There" Changes)
 
-Phase 1–4 exhausted hyperparameter tuning and simple architecture variants. The remaining gains require fundamentally different approaches:
+Phase 1–4 exhausted hyperparameter tuning and simple architecture variants. The remaining gains require fundamentally different approaches.
 
-- **Pretrained CLIP backbone**: Use OpenAI CLIP ViT-B/32 or similar as the image+text encoder instead of separate ViT-S + DistilBERT. Starts with cross-modal alignment already learned.
-- **ImageNet-21K ViT**: Use `vit_small_patch16_224.augreg_in21k` — better pretrained features for fine-tuning on small datasets.
-- **Feature-space heatmap attention**: Extract ViT patch tokens and weight by heatmap spatial map, instead of separate Conv2d patchification. Reuses backbone features for expert path.
-- **Hard negative mining**: Sample hard negatives from the batch (semi-hard or hardest) for the contrastive loss. Could give stronger gradients.
-- **Multi-scale image features**: Use intermediate ViT layer outputs in addition to final layer.
-- **Frozen backbone + train only projectors/heatmap**: With 6.6K samples, the backbone might not need fine-tuning if using a stronger pretrained model.
+### Validated ideas (from experiments so far)
+- **WiSE-FT alpha tuning**: α=0.2 works, α=0.5 too aggressive. Try α=0.1 — might be the sweet spot for lighter regularization.
+
+### Architecture changes (from program.md Phase 5)
+- **Heatmap-weighted pooling**: Replace HeatmapProcessor with ViT patch token pooling weighted by heatmap. Reuses backbone features instead of separate Conv2d patchification. Simpler and potentially more effective.
+- **Spatial prompt tokens**: Patchify heatmap → project to ViT embedding dim → prepend as extra tokens. Backbone learns to attend to spatial hints naturally.
+- **Attention bias**: Use heatmap to bias ViT self-attention. Patches inside bounding boxes get boosted attention. No new parameters but requires ViT internals.
+
+### Backbone changes
+- **ImageNet-21K ViT**: `vit_small_patch16_224.augreg_in21k` — better pretrained features for small datasets.
+- **Pretrained CLIP backbone**: Use OpenAI CLIP ViT-B/32 as image+text encoder. Already has cross-modal alignment.
+- **Frozen backbone + train only projectors/heatmap**: With 6.6K samples, backbone may not need fine-tuning with stronger pretrained model.
+
+### Moonshot ideas (from recent research)
+- **SigLIP-style chunked loss**: Instead of full NxN contrastive matrix, use chunked computation to enable effective BS>64 without OOM. Recent SigLIP/SigLIT papers show sigmoid loss can work at scale.
+- **Matryoshka representation learning (MRL)**: Train with nested projection dims (e.g., 64/128/256/512 simultaneously). Acts as implicit regularizer and may prevent overfitting with 800 steps.
+- **Register tokens (Darcet et al.)**: Add 4-8 learnable [REG] tokens to ViT input. They absorb global info, letting patch tokens stay local — could help heatmap attention work better since patch tokens would carry more spatial info.
+- **Exponential moving average (EMA) model**: Maintain EMA of weights during training, evaluate EMA model. Acts as temporal ensemble, often helps with small data.
+- **Soft contrastive targets**: Instead of hard 1-hot labels, use text similarity as soft targets (CLIP-style, but use text-text cosine sim to define soft positive/negative structure). Related to recent work on CLIPA and relaxed contrastive objectives.
+- **Patch dropout (FlexiViT-style)**: Randomly drop 30-50% of ViT patches during training. Reduces compute AND acts as regularizer — two birds with one stone for our overfitting problem.
+- **GradNorm or uncertainty weighting**: Automatically balance main loss and expert loss weights during training. May find better balance than fixed 0.1.
+
+### Diagnostics to run
+- **Expert utility check**: Run with EXPERT_PROB=0 on current config (with WiSE-FT) to measure how much expert annotations help vs vanilla CLIP. Last check was at experiment #10 (mean_rank 203.21 vs 199.21). Need an updated number with the current config.
 
 ## Failed Patterns
 - LR=1e-3: temperature explodes, total collapse
@@ -98,3 +118,5 @@ Phase 1–4 exhausted hyperparameter tuning and simple architecture variants. Th
 - LR=3e-4: too aggressive, unstable
 - Dropout/regularization: hurts convergence within 800 step budget
 - Gradient accumulation: proper implementation works but halved steps hurt more than larger batch helps
+- WiSE-FT alpha=0.5: too aggressive, destroys learned representations (+45.95)
+- SigLIP loss: sigmoid contrastive loss much worse (+29.69), high variance

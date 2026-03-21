@@ -56,7 +56,7 @@ MAX_TEMPERATURE = 100.0
 
 # WiSE-FT: interpolate pretrained and fine-tuned backbone weights
 # final = alpha * pretrained + (1 - alpha) * finetuned; 0 = pure finetuned
-WISE_FT_ALPHA = 0.2
+WISE_FT_ALPHA = 0.1
 
 
 # ---------------------------------------------------------------------------
