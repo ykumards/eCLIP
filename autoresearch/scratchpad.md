@@ -10,10 +10,12 @@
 - Exp #3: LR=1e-4 → mean_rank 324.61 ± 4.18 (prev 344.68). Modest improvement, more stable. But temp still clamped at 2.0.
 - Exp #4: MAX_TEMPERATURE=100 → mean_rank 211.42 ± 5.23 (prev 324.61). **HUGE win** (-113). Temperature now properly learned at ~14.3-14.4. Loss drops to 0.5-0.8 by step 400. The original MAX_TEMP=2.0 was catastrophically restrictive — it prevented the standard CLIP temperature scaling from working.
 
+- Exp #5: BS=64 → mean_rank 206.76 ± 6.59 (prev 211.42). Modest improvement. Memory 14.39 GB. More negatives helps.
+
 ## Hypotheses
-- LR=1e-4 might undertrain in 400 steps but could be more stable. Worth trying.
-- The temperature clamping at 2.0 suggests the logit scale is blowing up — may need tighter MAX_TEMPERATURE (e.g., 0.5 or 1.0).
-- Batch size increase could help contrastive learning (more negatives per batch).
+- BS=96 might help further but memory could approach 20 GB limit.
+- More steps (800) with current settings could push much lower — loss is still dropping at step 400.
+- Expert mechanism may now actually help given the temperature fix.
 
 ## Next Ideas
 - Try LR=1e-4 (Phase 1.1)
