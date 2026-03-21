@@ -1,6 +1,10 @@
 .vscode/
+.claude/
+autoresearch/logs/
 lightning_logs/
 saved_models/
+data/
+wandb/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

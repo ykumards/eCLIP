@@ -1,0 +1,50 @@
+[project]
+name = "eclip"
+version = "0.2.0"
+description = "Improving Contrastive Learning with Expert Annotations"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [
+    { name = "Yogesh Kumar", email = "ykumards@gmail.com" },
+]
+
+dependencies = [
+    "torch>=2.4",
+    "torchvision>=0.19",
+    "transformers>=4.44",
+    "timm>=1.0",
+    "numpy>=1.26",
+    "Pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8.0",
+]
+data = [
+    "gdown>=5.0",
+]
+viz = [
+    "matplotlib>=3.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/ykumards/eCLIP"
+Paper = "https://arxiv.org/abs/2403.10153"
+
+[tool.hatch.build.targets.wheel]
+packages = ["eclip"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
