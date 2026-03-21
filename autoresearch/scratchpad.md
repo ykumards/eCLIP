@@ -1,33 +1,60 @@
 # Autoresearch Scratchpad
 
 ## Current Best
-- mean_rank: 344.68 ± 12.66 (3-fold CV)
-- CLIP baseline (no expert): 345.91 ± 10.41
-- Expert adds almost nothing yet
+- **mean_rank: 196.94 ± 4.99** (3-fold CV)
+- Config: LR=1e-4, BS=64, MAX_STEPS=800, WARMUP=80, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=128
+- peak_memory_gb: 14.60
+- Improvement from original baseline (344.68): **-147.74** (~43% reduction)
 
-## Observations
-- Exp #2: LR=1e-3 → mean_rank 1541.50 ± 119.05 (MUCH worse). Temperature hit max clamp (2.0), loss plateaued ~3.87. LR way too high.
-- Exp #3: LR=1e-4 → mean_rank 324.61 ± 4.18 (prev 344.68). Modest improvement, more stable. But temp still clamped at 2.0.
-- Exp #4: MAX_TEMPERATURE=100 → mean_rank 211.42 ± 5.23 (prev 324.61). **HUGE win** (-113). Temperature now properly learned at ~14.3-14.4. Loss drops to 0.5-0.8 by step 400. The original MAX_TEMP=2.0 was catastrophically restrictive — it prevented the standard CLIP temperature scaling from working.
+## Key Findings
 
-- Exp #5: BS=64 → mean_rank 206.76 ± 6.59 (prev 211.42). Modest improvement. Memory 14.39 GB. More negatives helps.
-- Exp #6: BS=96 → mean_rank 218.40 ± 9.45 (WORSE). Memory 21.27 GB (over limit). Training loss very low (0.16) but val worse — overfitting.
-- Exp #7: MAX_STEPS=800 (WARMUP=80) → mean_rank 199.21 ± 6.06 (prev 206.76). Train loss reaches 0.05-0.07. R@1 up to 0.11.
-- Exp #8: MAX_STEPS=1000 (WARMUP=100) → mean_rank 206.25 ± 7.88 (WORSE). Overfitting. 800 steps is sweet spot.
-- Exp #9: WARMUP=40 (5%) → mean_rank 200.53 ± 5.92 (WORSE). 10% warmup is better.
-- Exp #10: EXPERT_PROB=0.0 → mean_rank 203.21 ± 6.63. Expert (0.3) at 199.21 IS helping by ~4 pts.
-- Exp #11: EXPERT_PROB=0.5 → mean_rank 199.38 ± 2.99 (no improvement over 0.3).
-- Exp #12: EXPERT_PROB=0.8 → mean_rank 196.94 ± 4.99 (improved -2.27). More expert helps.
+### Temperature was the biggest win
+The original MAX_TEMPERATURE=2.0 was catastrophically wrong. The init `log(1/0.07) ≈ 2.66` → `exp(2.66) ≈ 14.3` gets clamped to 2.0 immediately, so the temperature was never learned. Fixing to MAX_TEMPERATURE=100 gave **-113 mean_rank** in one change. Temperature now learns to ~14.3-14.9 (standard CLIP range).
+
+### Expert mechanism IS helpful (but modestly)
+With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.94. Expert contributes ~6 points. 0.3 and 0.5 were similar (~199), 0.8 is best, 1.0 hurts (202.87).
+
+### Training dynamics
+- Loss reaches 0.03-0.07 by step 800 — borderline overfitting
+- 800 steps is sweet spot; 1000 steps overfits (206.25 vs 199.21)
+- 10% warmup ratio works well; 5% slightly worse
+
+## Experiment Log
+
+| # | Change | mean_rank | delta | peak_mem | Status |
+|---|--------|-----------|-------|----------|--------|
+| 0 | CLIP baseline (EXPERT_PROB=0, old config) | 345.91 ± 10.41 | — | 6.3 | reference |
+| 1 | eCLIP baseline (EXPERT_PROB=0.3, old config) | 344.68 ± 12.66 | — | 11.3 | reference |
+| 2 | LR=1e-3 | 1541.50 ± 119.05 | +1196.82 | 11.3 | REVERTED |
+| 3 | LR=1e-4 | 324.61 ± 4.18 | -20.07 | 11.3 | committed |
+| 4 | MAX_TEMPERATURE=100 | 211.42 ± 5.23 | -113.19 | 11.3 | committed |
+| 5 | BS=64 | 206.76 ± 6.59 | -4.66 | 14.4 | committed |
+| 6 | BS=96 | 218.40 ± 9.45 | +11.64 | 21.3 | REVERTED (over mem limit) |
+| 7 | MAX_STEPS=800, WARMUP=80 | 199.21 ± 6.06 | -7.55 | 14.6 | committed |
+| 8 | MAX_STEPS=1000, WARMUP=100 | 206.25 ± 7.88 | +7.04 | 14.6 | REVERTED |
+| 9 | WARMUP=40 (5%) | 200.53 ± 5.92 | +1.32 | 14.6 | REVERTED |
+| 10 | EXPERT_PROB=0.0 | 203.21 ± 6.63 | +3.99 | 7.9 | REVERTED (baseline test) |
+| 11 | EXPERT_PROB=0.5 | 199.38 ± 2.99 | +0.17 | 14.7 | REVERTED |
+| 12 | EXPERT_PROB=0.8 | 196.94 ± 4.99 | -2.27 | 14.6 | committed |
+| 13 | EXPERT_PROB=1.0 | 202.87 ± 4.90 | +5.93 | 14.6 | REVERTED |
+| 14 | AUX_LOSS_WEIGHT=0.5 | 204.62 ± 6.88 | +7.68 | 14.6 | REVERTED |
+| 15 | MIXUP_ALPHA=0.8 | 198.08 ± 5.89 | +1.14 | 14.6 | REVERTED |
 
 ## Hypotheses
-- BS=96 might help further but memory could approach 20 GB limit.
-- More steps (800) with current settings could push much lower — loss is still dropping at step 400.
-- Expert mechanism may now actually help given the temperature fix.
+- 2-layer projectors (GELU + LayerNorm) could help — more capacity in the projection head
+- PROJ_DIM=256 may improve with current data size
+- Mean pooling for text (instead of CLS) often works better for DistilBERT
+- Pixel-space heatmap injection (image * heatmap → backbone) might capture spatial info better than MHA
 
-## Next Ideas
-- Try LR=1e-4 (Phase 1.1)
-- If LR=3e-4 remains best, move to batch size tuning (Phase 1.2)
-- Then temperature init tuning (Phase 1.3)
+## Next Experiments (Phase 3)
+- 2-layer projectors with GELU + LayerNorm (currently in progress)
+- Text pooling: mean pooling vs CLS
+- PROJ_DIM: 256 vs 128
+- Heatmap injection: pixel-space masking vs current MHA approach
 
-## Failed Attempts
-- LR=1e-3: catastrophic — temp explodes, mean_rank 1541 (4.5x worse than baseline)
+## Failed Patterns
+- LR=1e-3: temperature explodes, total collapse
+- BS=96: exceeds 20 GB memory, overfits
+- 1000 steps: overfits (train loss very low, val gets worse)
+- AUX_LOSS_WEIGHT=0.5: expert loss too strong, destabilizes training
+- EXPERT_PROB=1.0: too much expert, diminishing returns
