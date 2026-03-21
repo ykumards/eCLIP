@@ -11,6 +11,8 @@
 - Exp #4: MAX_TEMPERATURE=100 → mean_rank 211.42 ± 5.23 (prev 324.61). **HUGE win** (-113). Temperature now properly learned at ~14.3-14.4. Loss drops to 0.5-0.8 by step 400. The original MAX_TEMP=2.0 was catastrophically restrictive — it prevented the standard CLIP temperature scaling from working.
 
 - Exp #5: BS=64 → mean_rank 206.76 ± 6.59 (prev 211.42). Modest improvement. Memory 14.39 GB. More negatives helps.
+- Exp #6: BS=96 → mean_rank 218.40 ± 9.45 (WORSE). Memory 21.27 GB (over limit). Training loss very low (0.16) but val worse — overfitting.
+- Exp #7: MAX_STEPS=800 (WARMUP=80) → mean_rank 199.21 ± 6.06 (prev 206.76). Train loss reaches 0.05-0.07, very low. R@1 up to 0.11.
 
 ## Hypotheses
 - BS=96 might help further but memory could approach 20 GB limit.

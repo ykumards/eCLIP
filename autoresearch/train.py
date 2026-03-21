@@ -39,10 +39,10 @@ IMG_SIZE = 224
 BATCH_SIZE = 64
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 1e-4
-MAX_STEPS = 400
-WARMUP_STEPS = 40
-LOG_EVERY = 50
-EVAL_EVERY = 400  # eval at end of training only
+MAX_STEPS = 800
+WARMUP_STEPS = 80
+LOG_EVERY = 100
+EVAL_EVERY = 800  # eval at end of training only
 
 # eCLIP expert settings
 EXPERT_PROB = 0.3  # probability of using expert batch each step
