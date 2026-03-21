@@ -1,10 +1,10 @@
 # Autoresearch Scratchpad
 
 ## Current Best
-- **mean_rank: 183.27 ± 4.87** (3-fold CV)
-- Config: LR=1e-4, BS=64, MAX_STEPS=800, WARMUP=80, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=512
+- **mean_rank: 163.86 ± 3.85** (3-fold CV)
+- Config: LR=2e-4, BS=64, MAX_STEPS=800, WARMUP=80, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=512
 - peak_memory_gb: 14.86
-- Improvement from original baseline (344.68): **-161.41** (~47% reduction)
+- Improvement from original baseline (344.68): **-180.82** (~52% reduction)
 
 ## Key Findings
 
@@ -47,6 +47,9 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 | 21 | Pixel-space heatmap masking | 188.10 ± 3.22 | +4.83 | 18.4 | REVERTED |
 | 22 | WEIGHT_DECAY=1e-3 | 183.95 ± 2.94 | +0.68 | 14.9 | REVERTED |
 | 23 | Separate backbone LR=1e-5 | 289.20 ± 8.23 | +105.93 | 14.9 | REVERTED |
+| 24 | LR=2e-4 | 163.86 ± 3.85 | -19.41 | 14.9 | committed |
+| 25 | LR=3e-4 | 170.73 ± 6.52 | +6.87 | 14.9 | REVERTED |
+| 26 | AUX_LOSS_WEIGHT=0.2 | 166.05 ± 5.71 | +2.19 | 14.9 | REVERTED |
 
 ## Hypotheses
 - ~~2-layer projectors (GELU + LayerNorm) could help~~ — tested, worse (+7.63), extra capacity worsens overfitting
@@ -55,8 +58,8 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 - ~~Pixel-space heatmap injection~~ — tested, worse (+4.83) AND doubles expert-path memory. MHA is better than naive masking
 
 ## Next Experiments (Phase 3)
-- LR=2e-4 — current 1e-4 might be too conservative now with PROJ_DIM=512
-- AUX_LOSS_WEIGHT=0.2 — slightly stronger expert signal (0.1 current, 0.5 was too much)
+- MAX_STEPS=1200 with LR=2e-4 — with higher LR, the model converges faster; more steps at slower cosine decay may help
+- WARMUP=160 (20% of 800) — more warmup with higher LR to stabilize early training
 - Gradient accumulation for effective BS=128
 - Dropout in projectors to combat overfitting
 
@@ -71,3 +74,4 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 - Label smoothing=0.1: catastrophic (+47.02) — prevents model from learning sharp cross-modal distinctions
 - Pixel-space heatmap masking: worse than MHA (+4.83) and uses 18.4 GB (doubles expert path compute)
 - Separate backbone LR=1e-5: catastrophic (+105.93) — backbone can't adapt to art domain in 800 steps with low LR
+- LR=3e-4: too aggressive (+6.87), high variance — temperature climbs to ~16, some folds overfit
