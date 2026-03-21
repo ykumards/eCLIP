@@ -14,6 +14,34 @@ I picked the [Ukiyo-eVG](https://zenodo.org/records/13120879) dataset, which con
 
 *Expert spatial annotations: bounding boxes converted to gaussian heatmaps guide the model to focus on specific regions (e.g. "a girl", "her large pet bird", "a person playing football").*
 
+## The Loop
+
+1. `start.sh` launches Claude Code with locked-down permissions and an initial prompt. 
+2. The agent reads `program.md` for experiment priorities, makes one change to `train.py`, runs it inside a Docker container, and checks the result. 
+3. If the metric improved, it commits. If not, it reverts. 
+4. Then it updates `scratchpad.md` with what it learned 
+5. Waits 2 minutes for the GPU to cool down, and goes to Step 2.
+
+```bash
+./autoresearch/start.sh                     # fresh start, opus
+./autoresearch/start.sh resume sonnet       # resume with sonnet
+
+# Plot results
+cd autoresearch && uv run python plot_results.py --plot --both
+
+# Final training on all data + test evaluation
+cd autoresearch && uv run python train.py --final
+```
+
+## The Sandbox
+
+The agent can't do anything outside the experiment loop. Permissions are passed as CLI flags to Claude Code — no settings files to accidentally override.
+
+- **Can only edit**: `train.py`, `scratchpad.md`
+- **Can only run**: `./autoresearch/run.sh` (Docker: `--network=none`, `--memory=24g`, read-only code mount)
+- **Can only git**: add, commit, checkout, log, diff, status
+- **Cannot**: push, rm, pip install, curl, wget, run python directly, docker, sudo
+
 ## Results
 
 ![eCLIP Autoresearch Progress](figures/progress_dark.png)
@@ -37,31 +65,8 @@ Model: ViT-Small (22M) + DistilBERT (66M) + HeatmapProcessor · ~90M params · 8
 
 4. **WiSE-FT** (−3.5): Interpolating pretrained and fine-tuned backbone weights (`α=0.1`) gave a small but consistent improvement.
 
-5. **Expert mechanism** (~5 points): Spatial annotations via heatmap attention consistently help, but hyperparameter tuning matters 30x more.
+5. **Expert mechanism** (~5 points): Spatial annotations via heatmap attention consistently help, but hyperparameter tuning matters 30x more at this scale. 
 
-## The Loop
-
-`start.sh` launches Claude Code with locked-down permissions and an initial prompt. The agent reads `program.md` for experiment priorities, makes one change to `train.py`, runs it inside a Docker container, and checks the result. If the metric improved, it commits. If not, it reverts. Then it updates `scratchpad.md` with what it learned, waits 2 minutes for the GPU to cool down, and goes again.
-
-```bash
-./autoresearch/start.sh                     # fresh start, opus
-./autoresearch/start.sh resume sonnet       # resume with sonnet
-
-# Plot results
-cd autoresearch && uv run python plot_results.py --plot --both
-
-# Final training on all data + test evaluation
-cd autoresearch && uv run python train.py --final
-```
-
-## The Sandbox
-
-The agent can't do anything outside the experiment loop. Permissions are passed as CLI flags to Claude Code — no settings files to accidentally override.
-
-- **Can only edit**: `train.py`, `scratchpad.md`
-- **Can only run**: `./autoresearch/run.sh` (Docker: `--network=none`, `--memory=24g`, read-only code mount)
-- **Can only git**: add, commit, checkout, log, diff, status
-- **Cannot**: push, rm, pip install, curl, wget, run python directly, docker, sudo
 
 ## Acknowledgements
 
