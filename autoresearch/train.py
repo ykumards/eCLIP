@@ -32,7 +32,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # Model
 IMAGE_ENCODER = "vit_small_patch16_224"  # timm model name
 TEXT_ENCODER = "distilbert-base-uncased"
-PROJ_DIM = 256
+PROJ_DIM = 512
 IMG_SIZE = 224
 
 # Training
