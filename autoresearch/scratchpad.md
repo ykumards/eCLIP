@@ -12,7 +12,12 @@
 
 - Exp #5: BS=64 → mean_rank 206.76 ± 6.59 (prev 211.42). Modest improvement. Memory 14.39 GB. More negatives helps.
 - Exp #6: BS=96 → mean_rank 218.40 ± 9.45 (WORSE). Memory 21.27 GB (over limit). Training loss very low (0.16) but val worse — overfitting.
-- Exp #7: MAX_STEPS=800 (WARMUP=80) → mean_rank 199.21 ± 6.06 (prev 206.76). Train loss reaches 0.05-0.07, very low. R@1 up to 0.11.
+- Exp #7: MAX_STEPS=800 (WARMUP=80) → mean_rank 199.21 ± 6.06 (prev 206.76). Train loss reaches 0.05-0.07. R@1 up to 0.11.
+- Exp #8: MAX_STEPS=1000 (WARMUP=100) → mean_rank 206.25 ± 7.88 (WORSE). Overfitting. 800 steps is sweet spot.
+- Exp #9: WARMUP=40 (5%) → mean_rank 200.53 ± 5.92 (WORSE). 10% warmup is better.
+- Exp #10: EXPERT_PROB=0.0 → mean_rank 203.21 ± 6.63. Expert (0.3) at 199.21 IS helping by ~4 pts.
+- Exp #11: EXPERT_PROB=0.5 → mean_rank 199.38 ± 2.99 (no improvement over 0.3).
+- Exp #12: EXPERT_PROB=0.8 → mean_rank 196.94 ± 4.99 (improved -2.27). More expert helps.
 
 ## Hypotheses
 - BS=96 might help further but memory could approach 20 GB limit.

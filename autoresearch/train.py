@@ -45,7 +45,7 @@ LOG_EVERY = 100
 EVAL_EVERY = 800  # eval at end of training only
 
 # eCLIP expert settings
-EXPERT_PROB = 0.3  # probability of using expert batch each step
+EXPERT_PROB = 0.8  # probability of using expert batch each step
 MIXUP_ALPHA = 0.3  # beta distribution parameter for mixup
 AUX_LOSS_WEIGHT = 0.1  # weight for auxiliary reconstruction loss
 
