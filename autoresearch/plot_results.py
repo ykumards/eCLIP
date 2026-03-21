@@ -65,7 +65,7 @@ def parse_git_log():
     """Extract experiment data from structured commit messages."""
     result = subprocess.run(
         ["git", "log", "--reverse", "--format=%H%n%aI%n%s%n%b%n---END---",
-         "autoresearch-ukiyo", "--not", "main"],
+         "autoresearch-ukiyo"],
         capture_output=True, text=True,
         cwd=Path(__file__).parent.parent,
     )
@@ -174,9 +174,9 @@ def plot(all_experiments, committed_experiments, dark=False):
         facecolor = "white"
 
     plt.rcParams.update({
-        "font.family": "serif",
-        "font.serif": ["Noto Serif", "DejaVu Serif", "Times New Roman"],
-        "mathtext.fontset": "dejavuserif",
+        "font.family": "monospace",
+        "font.monospace": ["Hack", "Noto Sans Mono", "DejaVu Sans Mono"],
+        "mathtext.fontset": "dejavusans",
         "font.size": 11,
         "axes.spines.top": False,
         "axes.spines.right": False,
@@ -275,11 +275,13 @@ def plot(all_experiments, committed_experiments, dark=False):
             color = delta_green if delta < 0 else delta_red
             ax.annotate(f"{delta:+.1f}", (i, ranks[i]),
                         textcoords="offset points", xytext=(0, delta_y),
-                        ha="center", fontsize=7.5, color=color, fontweight="bold")
+                        ha="center", fontsize=9, color=color, fontweight="bold",
+                        family="monospace")
 
         ax.annotate(desc, (i, ranks[i]),
                     textcoords="offset points", xytext=(0, desc_y),
-                    ha="center", fontsize=6, color=fg_dim)
+                    ha="center", fontsize=7.5, color=fg_dim,
+                    family="monospace")
 
     # Annotate best
     best_idx = np.argmin(ranks)
@@ -384,10 +386,10 @@ def plot(all_experiments, committed_experiments, dark=False):
         # Style the table
         for (row, col), cell in table.get_celld().items():
             cell.set_edgecolor(table_edge)
-            cell.set_text_props(family="serif", color=fg)
+            cell.set_text_props(family="monospace", color=fg)
             if row == 0:
                 cell.set_facecolor(table_header)
-                cell.set_text_props(fontweight="bold", fontsize=8, family="serif", color=fg)
+                cell.set_text_props(fontweight="bold", fontsize=8, family="monospace", color=fg)
             else:
                 cell.set_facecolor(table_bg if row % 2 == 1 else table_alt)
                 # Color deltas
