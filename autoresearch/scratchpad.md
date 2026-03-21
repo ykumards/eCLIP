@@ -1,10 +1,10 @@
 # Autoresearch Scratchpad
 
 ## Current Best
-- **mean_rank: 196.94 ± 4.99** (3-fold CV)
-- Config: LR=1e-4, BS=64, MAX_STEPS=800, WARMUP=80, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=128
-- peak_memory_gb: 14.60
-- Improvement from original baseline (344.68): **-147.74** (~43% reduction)
+- **mean_rank: 189.01 ± 0.84** (3-fold CV)
+- Config: LR=1e-4, BS=64, MAX_STEPS=800, WARMUP=80, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=256
+- peak_memory_gb: 14.67
+- Improvement from original baseline (344.68): **-155.67** (~45% reduction)
 
 ## Key Findings
 
@@ -41,17 +41,19 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 | 15 | MIXUP_ALPHA=0.8 | 198.08 ± 5.89 | +1.14 | 14.6 | REVERTED |
 | 16 | Text mean pooling (vs CLS) | 197.93 ± 4.04 | +0.99 | 14.6 | REVERTED |
 | 17 | 2-layer projectors (GELU+LN) | 204.57 ± 6.29 | +7.63 | 14.6 | REVERTED |
+| 18 | PROJ_DIM=256 | 189.01 ± 0.84 | -7.93 | 14.7 | committed |
 
 ## Hypotheses
 - ~~2-layer projectors (GELU + LayerNorm) could help~~ — tested, worse (+7.63), extra capacity worsens overfitting
-- PROJ_DIM=256 may improve with current data size
+- PROJ_DIM=256 confirmed helpful (-7.93, extremely low variance 0.84) — more embedding capacity without adding model params
 - ~~Mean pooling for text (instead of CLS) often works better for DistilBERT~~ — tested, no improvement (+0.99), CLS is fine here
 - Pixel-space heatmap injection (image * heatmap → backbone) might capture spatial info better than MHA
 
 ## Next Experiments (Phase 3)
-- PROJ_DIM: 256 vs 128
+- PROJ_DIM=512 — push further since 256 helped significantly
 - Heatmap injection: pixel-space masking vs current MHA approach
 - Label smoothing in contrastive loss
+- Gradient accumulation for effective BS=128
 
 ## Failed Patterns
 - LR=1e-3: temperature explodes, total collapse
