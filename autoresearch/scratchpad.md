@@ -39,18 +39,19 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 | 13 | EXPERT_PROB=1.0 | 202.87 ± 4.90 | +5.93 | 14.6 | REVERTED |
 | 14 | AUX_LOSS_WEIGHT=0.5 | 204.62 ± 6.88 | +7.68 | 14.6 | REVERTED |
 | 15 | MIXUP_ALPHA=0.8 | 198.08 ± 5.89 | +1.14 | 14.6 | REVERTED |
+| 16 | Text mean pooling (vs CLS) | 197.93 ± 4.04 | +0.99 | 14.6 | REVERTED |
+| 17 | 2-layer projectors (GELU+LN) | 204.57 ± 6.29 | +7.63 | 14.6 | REVERTED |
 
 ## Hypotheses
-- 2-layer projectors (GELU + LayerNorm) could help — more capacity in the projection head
+- ~~2-layer projectors (GELU + LayerNorm) could help~~ — tested, worse (+7.63), extra capacity worsens overfitting
 - PROJ_DIM=256 may improve with current data size
-- Mean pooling for text (instead of CLS) often works better for DistilBERT
+- ~~Mean pooling for text (instead of CLS) often works better for DistilBERT~~ — tested, no improvement (+0.99), CLS is fine here
 - Pixel-space heatmap injection (image * heatmap → backbone) might capture spatial info better than MHA
 
 ## Next Experiments (Phase 3)
-- 2-layer projectors with GELU + LayerNorm (currently in progress)
-- Text pooling: mean pooling vs CLS
 - PROJ_DIM: 256 vs 128
 - Heatmap injection: pixel-space masking vs current MHA approach
+- Label smoothing in contrastive loss
 
 ## Failed Patterns
 - LR=1e-3: temperature explodes, total collapse
@@ -58,3 +59,5 @@ With proper temperature, EXPERT_PROB=0 gives 203.21, EXPERT_PROB=0.8 gives 196.9
 - 1000 steps: overfits (train loss very low, val gets worse)
 - AUX_LOSS_WEIGHT=0.5: expert loss too strong, destabilizes training
 - EXPERT_PROB=1.0: too much expert, diminishing returns
+- 2-layer projectors: more capacity in projector head worsens overfitting (+7.63)
+- Text mean pooling: no benefit over CLS for DistilBERT in this setup
