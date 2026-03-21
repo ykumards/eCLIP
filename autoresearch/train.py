@@ -52,7 +52,7 @@ AUX_LOSS_WEIGHT = 0.1  # weight for auxiliary reconstruction loss
 # Temperature
 INIT_TEMPERATURE = 0.07
 MIN_TEMPERATURE = 0.01
-MAX_TEMPERATURE = 2.0
+MAX_TEMPERATURE = 100.0
 
 
 # ---------------------------------------------------------------------------

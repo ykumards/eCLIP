@@ -6,8 +6,9 @@
 - Expert adds almost nothing yet
 
 ## Observations
-- Exp #2: LR=1e-3 → mean_rank 1541.50 ± 119.05 (MUCH worse). Temperature immediately hit max clamp (2.0) and stayed there all training. Loss plateaued ~3.87. LR way too high — temperature and embeddings diverge.
-- The baseline LR=3e-4 seems reasonable; 1e-3 is too aggressive for this model size/data combo.
+- Exp #2: LR=1e-3 → mean_rank 1541.50 ± 119.05 (MUCH worse). Temperature hit max clamp (2.0), loss plateaued ~3.87. LR way too high.
+- Exp #3: LR=1e-4 → mean_rank 324.61 ± 4.18 (prev 344.68). Modest improvement, more stable. But temp still clamped at 2.0.
+- Exp #4: MAX_TEMPERATURE=100 → mean_rank 211.42 ± 5.23 (prev 324.61). **HUGE win** (-113). Temperature now properly learned at ~14.3-14.4. Loss drops to 0.5-0.8 by step 400. The original MAX_TEMP=2.0 was catastrophically restrictive — it prevented the standard CLIP temperature scaling from working.
 
 ## Hypotheses
 - LR=1e-4 might undertrain in 400 steps but could be more stable. Worth trying.
