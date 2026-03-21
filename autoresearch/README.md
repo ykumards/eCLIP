@@ -8,7 +8,7 @@ The agent iteratively improved the eval metric (Mean Rank) by modifying a single
 I picked the [Ukiyo-eVG](https://zenodo.org/records/13120879) dataset, which consists of ~11K Japanese woodblock prints with phrase -> bounding box annotations from the [CIGAr](https://arxiv.org/abs/2410.12369) paper (ECCV 2024 VISART). The bounding boxes were converted to gaussian heatmaps and fed into the model as an additional input, similar to the Radiologist eye-gaze heatmaps in the original paper. 
 
 <p align="center">
-  <img src="figures/heatmap_girl_bird.png" width="80%">
+  <img src="figures/heatmap_girls.png" width="80%">
   <img src="figures/heatmap_courtesans.png" width="80%">
 </p>
 
