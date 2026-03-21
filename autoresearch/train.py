@@ -54,6 +54,10 @@ INIT_TEMPERATURE = 0.07
 MIN_TEMPERATURE = 0.01
 MAX_TEMPERATURE = 100.0
 
+# WiSE-FT: interpolate pretrained and fine-tuned backbone weights
+# final = alpha * pretrained + (1 - alpha) * finetuned; 0 = pure finetuned
+WISE_FT_ALPHA = 0.2
+
 
 # ---------------------------------------------------------------------------
 # Reproducibility
@@ -211,6 +215,13 @@ def train_fold(fold: int, tokenizer) -> float:
 
     model = ECLIPModel().to(DEVICE)
 
+    # Save pretrained backbone weights for WiSE-FT
+    if WISE_FT_ALPHA > 0:
+        pretrained_state = {
+            'img': {k: v.clone() for k, v in model.image_encoder.backbone.state_dict().items()},
+            'txt': {k: v.clone() for k, v in model.text_encoder.backbone.state_dict().items()},
+        }
+
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
     def lr_lambda(step):
@@ -271,6 +282,14 @@ def train_fold(fold: int, tokenizer) -> float:
         if step % LOG_EVERY == 0:
             elapsed = time.time() - start_time
             print(f"    step {step:>4d}/{MAX_STEPS} | loss {loss.item():.4f} | temp {model.temperature.item():.4f} | time {elapsed:.1f}s")
+
+    # WiSE-FT: interpolate pretrained and fine-tuned backbone weights
+    if WISE_FT_ALPHA > 0:
+        for name, module in [('img', model.image_encoder.backbone), ('txt', model.text_encoder.backbone)]:
+            finetuned = module.state_dict()
+            interpolated = {k: WISE_FT_ALPHA * pretrained_state[name][k] + (1 - WISE_FT_ALPHA) * finetuned[k] for k in finetuned}
+            module.load_state_dict(interpolated)
+        print(f"    WiSE-FT applied: alpha={WISE_FT_ALPHA}")
 
     # Evaluate on this fold's val set
     metrics = evaluate(model, loaders["val"], tokenizer, DEVICE)

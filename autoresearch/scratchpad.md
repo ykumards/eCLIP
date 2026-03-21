@@ -71,6 +71,7 @@ Expert contributes ~6–10 mean_rank points (comparing EXPERT_PROB=0 vs 0.8 acro
 | 30 | Cosine min LR=5% floor | 165.45 ± 1.83 | +4.52 | 14.9 | REVERTED |
 | 31 | MIXUP_ALPHA=0.1 | 162.95 ± 0.86 | +2.02 | 14.9 | REVERTED |
 | 32 | Grad accum (eff. BS=128, 400 steps) | 182.83 ± 4.12 | +21.90 | 8.6 | REVERTED |
+| 33 | SigLIP loss + learnable bias | 190.62 ± 12.01 | +29.69 | 14.9 | REVERTED |
 
 ## Next Experiments (Phase 5 — "Out There" Changes)
 
