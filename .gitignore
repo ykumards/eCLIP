@@ -1,6 +1,7 @@
 .vscode/
 .claude/
 autoresearch/logs/
+*.pt
 lightning_logs/
 saved_models/
 data/

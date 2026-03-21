@@ -331,5 +331,128 @@ def train():
     return avg_rank
 
 
+def train_final():
+    """Train on ALL data with best config, evaluate on held-out test set."""
+    print(f"Device: {DEVICE}")
+    print(f"=== FINAL TRAINING RUN ===")
+    print(f"Config: img={IMAGE_ENCODER}, txt={TEXT_ENCODER}, proj={PROJ_DIM}, bs={BATCH_SIZE}, lr={LEARNING_RATE}, steps={MAX_STEPS}")
+
+    set_seed(SEED)
+    tokenizer = AutoTokenizer.from_pretrained(TEXT_ENCODER)
+
+    # Use fold 0's train loader but with ALL data (train + val pooled, no holdout)
+    from prepare import load_annotations, UkiyoeCLIPDataset, UkiyoeExpertDataset, TRAIN_JSONL, VAL_JSONL
+    from torch.utils.data import DataLoader
+
+    all_samples = load_annotations(TRAIN_JSONL) + load_annotations(VAL_JSONL)
+    print(f"Training on ALL {len(all_samples)} samples (no CV holdout)")
+
+    train_ds = UkiyoeCLIPDataset(all_samples, IMG_SIZE)
+    train_expert_ds = UkiyoeExpertDataset(all_samples, IMG_SIZE)
+
+    train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)
+    expert_loader = DataLoader(train_expert_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)
+
+    model = ECLIPModel().to(DEVICE)
+
+    if WISE_FT_ALPHA > 0:
+        pretrained_state = {
+            'img': {k: v.clone() for k, v in model.image_encoder.backbone.state_dict().items()},
+            'txt': {k: v.clone() for k, v in model.text_encoder.backbone.state_dict().items()},
+        }
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+
+    def lr_lambda(step):
+        if step < WARMUP_STEPS:
+            return step / max(1, WARMUP_STEPS)
+        progress = (step - WARMUP_STEPS) / max(1, MAX_STEPS - WARMUP_STEPS)
+        return 0.5 * (1 + math.cos(math.pi * progress))
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    model.train()
+    train_iter = iter(train_loader)
+    expert_iter = iter(expert_loader)
+    start_time = time.time()
+
+    for step in range(1, MAX_STEPS + 1):
+        try:
+            batch = next(train_iter)
+        except StopIteration:
+            train_iter = iter(train_loader)
+            batch = next(train_iter)
+
+        images = batch["image"].to(DEVICE)
+        tokens = tokenizer(batch["caption"], padding=True, truncation=True, max_length=128, return_tensors="pt").to(DEVICE)
+
+        out = model(images, tokens)
+        loss = contrastive_loss(out["img_emb"], out["txt_emb"], model.temperature)
+
+        if random.random() < EXPERT_PROB:
+            try:
+                expert_batch = next(expert_iter)
+            except StopIteration:
+                expert_iter = iter(expert_loader)
+                expert_batch = next(expert_iter)
+
+            exp_images = expert_batch["image"].to(DEVICE)
+            exp_heatmaps = expert_batch["heatmap"].to(DEVICE)
+            exp_tokens = tokenizer(expert_batch["caption"], padding=True, truncation=True, max_length=128, return_tensors="pt").to(DEVICE)
+            exp_snippet_tokens = tokenizer(expert_batch["snippet"], padding=True, truncation=True, max_length=64, return_tensors="pt").to(DEVICE)
+
+            exp_out = model(exp_images, exp_tokens, heatmaps=exp_heatmaps)
+            snippet_emb = F.normalize(model.encode_text(exp_snippet_tokens), dim=-1)
+
+            exp_loss = expert_loss(
+                exp_out["img_emb"], exp_out["masked_emb"],
+                exp_out["txt_emb"], snippet_emb,
+                model.temperature,
+            )
+            loss = loss + AUX_LOSS_WEIGHT * exp_loss
+
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+
+        if step % LOG_EVERY == 0:
+            elapsed = time.time() - start_time
+            print(f"  step {step:>4d}/{MAX_STEPS} | loss {loss.item():.4f} | temp {model.temperature.item():.4f} | time {elapsed:.1f}s")
+
+    # WiSE-FT
+    if WISE_FT_ALPHA > 0:
+        for name, module in [('img', model.image_encoder.backbone), ('txt', model.text_encoder.backbone)]:
+            finetuned = module.state_dict()
+            interpolated = {k: WISE_FT_ALPHA * pretrained_state[name][k] + (1 - WISE_FT_ALPHA) * finetuned[k] for k in finetuned}
+            module.load_state_dict(interpolated)
+        print(f"  WiSE-FT applied: alpha={WISE_FT_ALPHA}")
+
+    # Evaluate on TEST set
+    test_loader = build_test_dataloader(batch_size=BATCH_SIZE, img_size=IMG_SIZE)
+    test_metrics = evaluate(model, test_loader, tokenizer, DEVICE)
+
+    print("\n" + "=" * 50)
+    print("FINAL TEST SET RESULTS:")
+    print(f"  mean_rank:  {test_metrics['mean_rank']:.2f}")
+    print(f"  img→txt R@1: {test_metrics['img2txt_r1']:.4f}  R@5: {test_metrics['img2txt_r5']:.4f}  R@10: {test_metrics['img2txt_r10']:.4f}")
+    print(f"  txt→img R@1: {test_metrics['txt2img_r1']:.4f}  R@5: {test_metrics['txt2img_r5']:.4f}  R@10: {test_metrics['txt2img_r10']:.4f}")
+    print("=" * 50)
+
+    # Save model
+    save_path = os.path.join(os.path.dirname(__file__), "eclip_final.pt")
+    torch.save(model.state_dict(), save_path)
+    print(f"\nModel saved to: {save_path}")
+
+    peak_mem = torch.cuda.max_memory_allocated() / 1e9 if torch.cuda.is_available() else 0
+    print(f"Peak memory: {peak_mem:.2f} GB")
+
+    return test_metrics
+
+
 if __name__ == "__main__":
-    train()
+    if "--final" in sys.argv:
+        train_final()
+    else:
+        train()

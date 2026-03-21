@@ -1,10 +1,24 @@
 # Autoresearch Scratchpad
 
 ## Current Best
-- **mean_rank: 158.45 ± 0.68** (3-fold CV)
-- Config: LR=2e-4, BS=64, MAX_STEPS=800, WARMUP=160, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=512, WISE_FT_ALPHA=0.2
+- **Val mean_rank: 157.43 ± 0.76** (3-fold CV)
+- Config: LR=2e-4, BS=64, MAX_STEPS=800, WARMUP=160, EXPERT_PROB=0.8, MIXUP_ALPHA=0.3, AUX_LOSS_WEIGHT=0.1, MAX_TEMP=100, PROJ_DIM=512, WISE_FT_ALPHA=0.1
 - peak_memory_gb: 15.22
-- Improvement from original baseline (344.68): **-186.23** (~54% reduction)
+- Improvement from original baseline (344.68): **-187.25** (~54% reduction)
+
+## Final Test Results (trained on all 9,893 samples)
+| Metric | Score |
+|--------|-------|
+| Mean Rank | **34.30** |
+| img→txt R@1 | 26.82% |
+| img→txt R@5 | 53.00% |
+| img→txt R@10 | 63.09% |
+| txt→img R@1 | 25.64% |
+| txt→img R@5 | 51.36% |
+| txt→img R@10 | 62.45% |
+
+Model: ViT-Small (22M) + DistilBERT (66M) + HeatmapProcessor, ~90M params total.
+Trained 800 steps (~3 min) on a single 4090. Model saved to `eclip_final.pt`.
 
 ## Phase 1–4 Summary (32 experiments)
 
@@ -19,6 +33,8 @@
 | PROJ_DIM 128 → 256 → 512 | -13.67 | Linear projection capacity matters |
 | LR 1e-4 → 2e-4 | -19.41 | Re-tuned after PROJ_DIM=512; 2e-4 is sweet spot |
 | WARMUP 80 → 160 (20%) | -2.93 | Stabilizes early training with higher LR |
+| WiSE-FT α=0.2 | -2.48 | Weight interpolation preserves pretrained features |
+| WiSE-FT α=0.1 | -1.02 | Lighter interpolation slightly better than 0.2 |
 
 ### What didn't work (reverted, 22 experiments)
 - **Regularization fails**: Label smoothing (+47), dropout (+10), weight decay 1e-3 (+0.7), cosine min LR (+4.5) — all hurt. The model needs every bit of capacity in 800 steps.
@@ -32,7 +48,7 @@
 The model consistently overfits between 800–1000 steps regardless of regularization. The fundamental limit is **data size** (~6.6K train samples per fold). Every approach that adds capacity (more layers, more steps, keeping LR high) makes this worse. The improvements that worked all operate *within* this constraint: better use of existing capacity (temperature fix, PROJ_DIM, LR tuning) rather than adding more.
 
 ### What the expert mechanism does
-Expert contributes ~6–10 mean_rank points (comparing EXPERT_PROB=0 vs 0.8 across configs). It's consistently helpful but modest. The MHA-based heatmap processor outperforms pixel-space masking. The mechanism is limited by the quality of pseudo bounding boxes (GroundingDINO-generated, not human-annotated).
+Expert contributes ~5 mean_rank points with current config (162.37→157.43, exp #40). Earlier measurement was ~4 points (exp #10). Consistently helpful but modest. The MHA-based heatmap processor outperforms pixel-space masking and heatmap-weighted pooling. The mechanism is limited by the quality of pseudo bounding boxes (GroundingDINO-generated, not human-annotated).
 
 ## Experiment Log
 
@@ -74,35 +90,31 @@ Expert contributes ~6–10 mean_rank points (comparing EXPERT_PROB=0 vs 0.8 acro
 | 33 | SigLIP loss + learnable bias | 190.62 ± 12.01 | +29.69 | 14.9 | REVERTED |
 | 34 | WiSE-FT alpha=0.5 | 206.88 ± 5.10 | +45.95 | 15.2 | REVERTED (alpha too high) |
 | 35 | WiSE-FT alpha=0.2 | 158.45 ± 0.68 | -2.48 | 15.2 | committed |
+| 36 | WiSE-FT alpha=0.1 | 157.43 ± 0.76 | -1.02 | 15.2 | committed |
+| 37 | EMA decay=0.999 | 242.63 ± 8.44 | +85.20 | 15.6 | REVERTED (too much smoothing for 800 steps) |
+| 38 | Heatmap-weighted pooling (replace MHA) | 168.48 ± 2.15 | +11.05 | 14.9 | REVERTED (MHA is more expressive) |
+| 39 | Freeze ViT blocks 0-7 | 212.00 ± 3.27 | +54.57 | 10.1 | REVERTED (backbone needs to adapt photo→art) |
+| 40 | EXPERT_PROB=0 diagnostic | 162.37 ± 2.10 | +4.94 | 8.2 | REVERTED (diagnostic: expert adds ~5 pts with current config) |
+| 41 | Spatial prompt tokens (49 tokens, 7x7) | 167.65 ± 0.91 | +10.22 | 19.7 | REVERTED (worse than MHA, near OOM) |
+| 42 | Attention bias (scale=2.0, no HeatmapProcessor) | 166.85 ± 1.35 | +9.42 | 19.4 | REVERTED (worse than MHA) |
 
 ## Next Experiments (Phase 5 — "Out There" Changes)
 
 Phase 1–4 exhausted hyperparameter tuning and simple architecture variants. The remaining gains require fundamentally different approaches.
 
 ### Validated ideas (from experiments so far)
-- **WiSE-FT alpha tuning**: α=0.2 works, α=0.5 too aggressive. Try α=0.1 — might be the sweet spot for lighter regularization.
+- ~~**WiSE-FT alpha tuning**: α=0.1 committed (-1.02). α=0.2 and 0.1 both work; 0.1 is slightly better. Diminishing returns — skip α=0.05.~~
+- ~~**Heatmap-weighted pooling**: Tested (#38, +11.05). MHA cross-attention is more expressive than simple weighted pooling.~~
+- ~~**EMA**: Tested (#37, +85.20). Too much smoothing for 800 steps.~~
+- ~~**Freeze early ViT blocks**: Tested (#39, +54.57). Backbone needs full fine-tuning to adapt photo→art.~~
+- ~~**Expert utility check**: Tested (#40). Expert adds ~5 pts (162.37→157.43) with current config.~~
 
-### Architecture changes (from program.md Phase 5)
-- **Heatmap-weighted pooling**: Replace HeatmapProcessor with ViT patch token pooling weighted by heatmap. Reuses backbone features instead of separate Conv2d patchification. Simpler and potentially more effective.
-- **Spatial prompt tokens**: Patchify heatmap → project to ViT embedding dim → prepend as extra tokens. Backbone learns to attend to spatial hints naturally.
-- **Attention bias**: Use heatmap to bias ViT self-attention. Patches inside bounding boxes get boosted attention. No new parameters but requires ViT internals.
+### Remaining experiments (final two) — DONE
+- ~~**Spatial prompt tokens** (#41, +10.22): Prepended 49 heatmap tokens to ViT input. Near OOM (19.7 GB), worse than MHA.~~
+- ~~**Attention bias** (#42, +9.42): Injected heatmap as additive bias in ViT self-attention. No new params but worse than dedicated MHA.~~
 
-### Backbone changes
-- **ImageNet-21K ViT**: `vit_small_patch16_224.augreg_in21k` — better pretrained features for small datasets.
-- **Pretrained CLIP backbone**: Use OpenAI CLIP ViT-B/32 as image+text encoder. Already has cross-modal alignment.
-- **Frozen backbone + train only projectors/heatmap**: With 6.6K samples, backbone may not need fine-tuning with stronger pretrained model.
-
-### Moonshot ideas (from recent research)
-- **SigLIP-style chunked loss**: Instead of full NxN contrastive matrix, use chunked computation to enable effective BS>64 without OOM. Recent SigLIP/SigLIT papers show sigmoid loss can work at scale.
-- **Matryoshka representation learning (MRL)**: Train with nested projection dims (e.g., 64/128/256/512 simultaneously). Acts as implicit regularizer and may prevent overfitting with 800 steps.
-- **Register tokens (Darcet et al.)**: Add 4-8 learnable [REG] tokens to ViT input. They absorb global info, letting patch tokens stay local — could help heatmap attention work better since patch tokens would carry more spatial info.
-- **Exponential moving average (EMA) model**: Maintain EMA of weights during training, evaluate EMA model. Acts as temporal ensemble, often helps with small data.
-- **Soft contrastive targets**: Instead of hard 1-hot labels, use text similarity as soft targets (CLIP-style, but use text-text cosine sim to define soft positive/negative structure). Related to recent work on CLIPA and relaxed contrastive objectives.
-- **Patch dropout (FlexiViT-style)**: Randomly drop 30-50% of ViT patches during training. Reduces compute AND acts as regularizer — two birds with one stone for our overfitting problem.
-- **GradNorm or uncertainty weighting**: Automatically balance main loss and expert loss weights during training. May find better balance than fixed 0.1.
-
-### Diagnostics to run
-- **Expert utility check**: Run with EXPERT_PROB=0 on current config (with WiSE-FT) to measure how much expert annotations help vs vanilla CLIP. Last check was at experiment #10 (mean_rank 203.21 vs 199.21). Need an updated number with the current config.
+### Key conclusion from Phase 5
+All three alternative expert fusion approaches (heatmap-weighted pooling #38, spatial prompt tokens #41, attention bias #42) performed ~10 points worse than the MHA-based HeatmapProcessor. The dedicated cross-attention module with learned query/key/value projections is the right design for this task. The MHA approach can learn complex spatial relationships that simpler alternatives cannot match.
 
 ## Failed Patterns
 - LR=1e-3: temperature explodes, total collapse
@@ -120,3 +132,9 @@ Phase 1–4 exhausted hyperparameter tuning and simple architecture variants. Th
 - Gradient accumulation: proper implementation works but halved steps hurt more than larger batch helps
 - WiSE-FT alpha=0.5: too aggressive, destroys learned representations (+45.95)
 - SigLIP loss: sigmoid contrastive loss much worse (+29.69), high variance
+- EMA 0.999: catastrophic (+85.20). With 800 steps, ~45% weight still on initial params. Another regularization failure.
+- Heatmap-weighted pooling: simpler but worse (+11.05). MHA cross-attention learns richer spatial relationships than simple weighted pooling.
+- Freeze ViT blocks 0-7: catastrophic (+54.57). Backbone needs to adapt from photo domain to art domain.
+- Spatial prompt tokens: worse (+10.22) and near OOM (19.7 GB). Extra tokens in ViT too expensive.
+- Attention bias: worse (+9.42) despite being parameter-free. Biasing existing attention is weaker than dedicated MHA.
+- All Phase 5 expert fusion alternatives lost to the MHA HeatmapProcessor by ~10 points.
