@@ -87,6 +87,32 @@ Try these roughly in order. Each experiment should change ONE thing.
 22. Hard negative mining (semi-hard or hardest negatives)
 23. Data augmentation: random resized crop, color jitter on images
 
+### Phase 5 — Expert fusion architecture (better ways to inject spatial knowledge)
+The current HeatmapProcessor is a bolt-on: the heatmap info never touches the ViT backbone.
+These alternatives fuse expert spatial annotations more deeply into the model:
+
+24. **Heatmap-weighted pooling** — replace HeatmapProcessor entirely. Instead of CLS token,
+    pool ViT patch tokens weighted by heatmap values. The expert knowledge becomes *how to
+    read* the image, not a separate path:
+    ```python
+    heatmap_down = F.adaptive_avg_pool2d(heatmap, (14, 14)).flatten(1)  # (B, 196)
+    weights = F.softmax(heatmap_down, dim=-1)
+    patch_tokens = backbone.forward_features(image)[:, 1:]  # skip CLS, (B, 196, D)
+    pooled = (patch_tokens * weights.unsqueeze(-1)).sum(dim=1)  # (B, D)
+    ```
+25. **Attention bias** — use the heatmap to bias ViT self-attention directly. Patches inside
+    bounding boxes get boosted attention. No new parameters:
+    ```python
+    attn_scores = Q @ K.T / sqrt(d) + heatmap_bias  # heatmap_bias from downsampled heatmap
+    ```
+    Note: requires accessing ViT internals (timm's `forward_features` or custom forward).
+26. **Spatial prompt tokens** (inspired by Voila-A) — patchify heatmap, project to ViT
+    embedding dim, prepend as extra tokens to ViT input. Backbone learns to attend to spatial
+    hints naturally. Adds a small projection layer but no backbone changes.
+27. **WiSE-FT** — after training, interpolate pretrained and fine-tuned weights:
+    `final = α * pretrained + (1-α) * finetuned`. One-line experiment, often helps on small
+    datasets by preserving pretrained features. Try α in [0.2, 0.4, 0.6, 0.8].
+
 ## Vibe
 
 This is a single 4090, not a cluster. Push hard on the metric, but keep the code simple and scrappy. A clean 50-line change that drops mean_rank by 10 is better than a 300-line refactor that drops it by 12. Don't over-engineer — no custom CUDA kernels, no distributed training, no elaborate config systems. Just edit train.py, run it, check the number.
