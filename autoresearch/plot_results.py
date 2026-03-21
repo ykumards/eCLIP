@@ -404,7 +404,7 @@ def plot(all_experiments, committed_experiments, dark=False):
     out.mkdir(exist_ok=True)
     suffix = "_dark" if dark else ""
     outfile = out / f"progress{suffix}.png"
-    plt.savefig(outfile, dpi=200, bbox_inches="tight", facecolor=facecolor)
+    plt.savefig(outfile, dpi=300, bbox_inches="tight", facecolor=facecolor)
     print(f"Saved: {outfile}")
     plt.show()
 
