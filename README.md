@@ -1,3 +1,5 @@
+
+
 # eCLIP 
 
 <a href="https://arxiv.org/abs/2403.10153">
@@ -12,6 +14,8 @@ Code for "Improving Medical Multi-modal Contrastive Learning with Expert Annotat
 Read the full paper here: https://arxiv.org/abs/2403.10153
 
 ### Setup
+
+The repository requires Python >= 3.11.
 
 We use the `eclip` package for training and evaluation. To install it run `pip install -e .` from the root folder and it installs all the dependencies. 
 
@@ -65,4 +69,3 @@ We use `Mistral 7B Instruction` for generating radiology reports using the input
 - Tracking -- [Weights & Biases](https://wandb.ai/)
 - Config Management -- [Hydra](https://hydra.cc/)
 - Data loading -- [Webdataset](https://github.com/webdataset/webdataset)
-
